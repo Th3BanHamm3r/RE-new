@@ -1,0 +1,67 @@
+{
+  "manifest_version": 3,
+  "name": "RE:new",
+  "short_name": "RE:new",
+  "version": "1.0.0",
+  "description": "Firefox extension for relisting Facebook Marketplace listings with an always-open control panel.",
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "action": {
+    "default_title": "RE:new",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "permissions": [
+    "tabs",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://*.facebook.com/*",
+    "https://*.fbcdn.net/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.facebook.com/*",
+        "https://web.facebook.com/*"
+      ],
+      "js": [
+        "contentScript.js"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "matches": [
+        "https://www.facebook.com/*",
+        "https://web.facebook.com/*"
+      ],
+      "resources": [
+        "assets/overlay.css",
+        "assets/brand-glyph.png"
+      ]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://*.facebook.com https://*.fbcdn.net"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "REnew-firefox@local.invalid",
+      "strict_min_version": "128.0"
+    }
+  }
+}

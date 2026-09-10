@@ -1,0 +1,30 @@
+minimum_prek_version = "0.5.2"
+
+exclude = '(^|/)(node_modules|dist)/'
+
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "eslint"
+name = "eslint"
+language = "system"
+entry = "node ./node_modules/eslint/bin/eslint.js --fix"
+files = "\\.(js|mjs|cjs)$"
+types = ["file"]
+
+[[repos.hooks]]
+id = "prettier"
+name = "prettier"
+language = "system"
+entry = "node ./node_modules/prettier/bin/prettier.cjs --write --ignore-unknown"
+files = "\\.(md|css)$"
+types = ["file"]
+
+[[repos]]
+repo = "https://github.com/codespell-project/codespell"
+rev = "v2.4.3"
+
+[[repos.hooks]]
+id = "codespell"
+args = ["--write-changes"]

@@ -1,0 +1,1091 @@
+/*
+ * RE:new UI
+ *
+ * The extension follows Facebook Marketplace's light and dark UI vocabulary:
+ * primary blue, neutral surfaces, matching text/border tones, and flat fills.
+ * No gradients are used so extension controls remain visually consistent.
+ */
+
+:root {
+  --mrf-blue: #0866ff;
+  --mrf-blue-hover: #075ce5;
+  --mrf-blue-soft: #e7f3ff;
+
+  --mrf-page-bg: #f0f2f5;
+  --mrf-surface: #ffffff;
+
+  --mrf-facebook-gray: #f0f2f5;
+  --mrf-facebook-gray-hover: #e4e6eb;
+
+  --mrf-border: #ced0d4;
+  --mrf-divider: #e4e6eb;
+
+  --mrf-blue-border: #b7d4fb;
+  --mrf-hover-border: #b0b3b8;
+
+  --mrf-text: #050505;
+  --mrf-text-secondary: #65676b;
+
+  --mrf-disabled: #bcc0c4;
+  --mrf-white: #ffffff;
+  --mrf-danger: #b42318;
+
+  --mrf-font:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+
+  --mrf-radius-panel: 12px;
+  --mrf-radius-control: 8px;
+
+  --mrf-shadow-panel: 0 8px 28px rgba(0, 0, 0, 0.18);
+}
+
+:root[data-mrf-theme="dark"] {
+  --mrf-blue: #0866ff;
+  --mrf-blue-hover: #2374e1;
+  --mrf-blue-soft: rgba(8, 102, 255, 0.18);
+
+  --mrf-page-bg: #18191a;
+  --mrf-surface: #242526;
+
+  --mrf-facebook-gray: #3a3b3c;
+  --mrf-facebook-gray-hover: #4e4f50;
+
+  --mrf-border: #3e4042;
+  --mrf-divider: #3e4042;
+
+  --mrf-blue-border: #263951;
+  --mrf-hover-border: #606770;
+
+  --mrf-text: #e4e6eb;
+  --mrf-text-secondary: #b0b3b8;
+
+  --mrf-disabled: #4e4f50;
+
+  --mrf-shadow-panel: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Startup overlay                                                            */
+/* -------------------------------------------------------------------------- */
+
+#mrf-overlay {
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: 2147483644;
+  background: rgba(0, 0, 0, 0.34);
+}
+
+#mrf-overlay .mrf-overlay-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+
+  transform: translate(-50%, -50%);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  gap: 14px;
+
+  padding: 26px 32px;
+
+  border: 1px solid var(--mrf-divider);
+  border-radius: var(--mrf-radius-panel);
+
+  background: var(--mrf-surface);
+
+  box-shadow: var(--mrf-shadow-panel);
+
+  font-family: var(--mrf-font);
+}
+
+#mrf-overlay .mrf-spinner {
+  width: 42px;
+  height: 42px;
+
+  border: 4px solid var(--mrf-facebook-gray-hover);
+  border-top-color: var(--mrf-blue);
+  border-radius: 50%;
+
+  animation: mrf-spin 0.8s linear infinite;
+}
+
+#mrf-overlay .mrf-overlay-text {
+  margin: 0;
+
+  color: var(--mrf-text);
+
+  font-size: 15px;
+  font-weight: 600;
+}
+
+@keyframes mrf-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Listing selector                                                           */
+/* -------------------------------------------------------------------------- */
+
+.mrf-pick-btn {
+  position: absolute;
+
+  top: 8px;
+  left: 8px;
+
+  z-index: 10;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 30px;
+  height: 30px;
+
+  padding: 0;
+
+  border: 1px solid var(--mrf-border);
+  border-radius: 5px;
+
+  background: var(--mrf-facebook-gray);
+  color: transparent;
+
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16);
+
+  cursor: pointer;
+
+  font-family: var(--mrf-font);
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.mrf-pick-btn:hover {
+  background: var(--mrf-facebook-gray-hover);
+  border-color: var(--mrf-hover-border);
+}
+
+.mrf-pick-btn:active {
+  transform: scale(0.94);
+}
+
+.mrf-pick-btn.selected {
+  background: var(--mrf-blue);
+  border-color: var(--mrf-blue);
+  color: var(--mrf-white);
+}
+
+.mrf-pick-btn.selected:hover {
+  background: var(--mrf-blue-hover);
+  border-color: var(--mrf-blue-hover);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Listing age badge                                                          */
+/* -------------------------------------------------------------------------- */
+
+.mrf-age,
+.mrf-age.stale {
+  position: absolute;
+
+  top: 8px;
+  right: 8px;
+
+  z-index: 10;
+
+  display: inline-flex;
+  align-items: center;
+
+  min-height: 22px;
+
+  padding: 2px 8px;
+
+  border: 1px solid rgba(255, 255, 255, 0.7);
+
+  border-radius: 999px;
+
+  background: var(--mrf-blue);
+  color: var(--mrf-white);
+
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.14);
+
+  font-family: var(--mrf-font);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Main panel                                                                 */
+/* -------------------------------------------------------------------------- */
+
+#mrf-select-btn {
+  position: fixed;
+
+  left: 20px !important;
+  bottom: 10px !important;
+
+  z-index: 2147483647;
+
+  display: flex;
+
+  width: 320px;
+  max-width: calc(100vw - 10px) !important;
+
+  font-family: var(--mrf-font);
+}
+
+.mrf-panel {
+  display: flex;
+  flex-direction: column;
+
+  width: 320px;
+  max-width: 100%;
+
+  overflow: hidden;
+
+  border: 1px solid var(--mrf-border);
+  border-radius: var(--mrf-radius-panel);
+
+  background: var(--mrf-surface);
+
+  box-shadow: var(--mrf-shadow-panel);
+}
+
+.mrf-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+
+  min-width: 0;
+
+  padding: 12px 14px;
+
+  border-bottom: 1px solid #075ce5;
+
+  background: var(--mrf-blue);
+  color: var(--mrf-white);
+}
+
+.mrf-brand-wrap {
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+
+  min-width: 0;
+}
+
+.mrf-brand-mark {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.mrf-brand-glyph {
+  display: block;
+
+  width: 18px;
+  height: 18px;
+}
+
+.mrf-brand-name {
+  min-width: 0;
+
+  overflow: hidden;
+
+  color: var(--mrf-white);
+
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.1px;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mrf-version {
+  flex: 0 0 auto;
+
+  margin-left: auto;
+
+  padding: 2px 7px;
+
+  border: 1px solid rgba(255, 255, 255, 0.5);
+
+  border-radius: 999px;
+
+  background: rgba(255, 255, 255, 0.12);
+
+  color: var(--mrf-white);
+
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.mrf-panel-body {
+  display: flex;
+  flex-direction: column;
+
+  gap: 10px;
+
+  padding: 12px;
+
+  background: var(--mrf-page-bg);
+  color: var(--mrf-text);
+}
+
+.mrf-section {
+  display: flex;
+  flex-direction: column;
+
+  gap: 8px;
+
+  min-width: 0;
+
+  padding: 10px;
+
+  border: 1px solid var(--mrf-divider);
+  border-radius: 10px;
+
+  background: var(--mrf-surface);
+
+  box-sizing: border-box;
+}
+
+.mrf-section-title {
+  color: var(--mrf-text-secondary);
+
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.45px;
+
+  text-transform: uppercase;
+}
+
+.mrf-panel .mrf-pick-loading {
+  color: var(--mrf-text-secondary);
+
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Selection count                                                            */
+/* -------------------------------------------------------------------------- */
+
+.mrf-selbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 34px;
+
+  padding: 7px 10px;
+
+  border: 1px solid var(--mrf-blue-border);
+  border-radius: 8px;
+
+  background: var(--mrf-blue-soft);
+  color: var(--mrf-blue);
+
+  font-size: 13px;
+  font-weight: 700;
+
+  text-align: center;
+
+  box-sizing: border-box;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Selection buttons                                                          */
+/* -------------------------------------------------------------------------- */
+
+.mrf-selection-actions {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 1fr);
+
+  gap: 8px;
+}
+
+.mrf-panel .mrf-chip,
+#mrf-relist-btn {
+  border: 1px solid var(--mrf-blue);
+  border-radius: var(--mrf-radius-control);
+
+  background: var(--mrf-blue);
+  color: var(--mrf-white);
+
+  cursor: pointer;
+
+  font-family: var(--mrf-font);
+  font-size: 13px;
+  font-weight: 700;
+
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.mrf-panel .mrf-chip {
+  width: 100%;
+
+  min-width: 0;
+  min-height: 34px;
+
+  padding: 7px 10px;
+
+  box-sizing: border-box;
+}
+
+.mrf-panel .mrf-chip:hover,
+#mrf-relist-btn:hover:not(:disabled) {
+  background: var(--mrf-blue-hover);
+  border-color: var(--mrf-blue-hover);
+}
+
+.mrf-panel .mrf-chip:active,
+#mrf-relist-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.mrf-panel .mrf-chip-secondary {
+  border-color: var(--mrf-border);
+
+  background: var(--mrf-facebook-gray);
+  color: var(--mrf-text);
+}
+
+.mrf-panel .mrf-chip-secondary:hover {
+  border-color: var(--mrf-hover-border);
+
+  background: var(--mrf-facebook-gray-hover);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Stale listing selector                                                     */
+/* -------------------------------------------------------------------------- */
+
+.mrf-stale-picker {
+  display: flex;
+  flex-direction: column;
+
+  gap: 7px;
+
+  padding-top: 9px;
+
+  border-top: 1px solid var(--mrf-divider);
+}
+
+.mrf-stale-title {
+  color: var(--mrf-text-secondary);
+
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.45px;
+  line-height: 1.2;
+}
+
+.mrf-stale-grid {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 1fr);
+
+  align-items: center;
+
+  gap: 8px;
+}
+
+.mrf-stepper {
+  display: grid;
+
+  grid-template-columns:
+    32px
+    minmax(36px, 1fr)
+    32px;
+
+  align-items: center;
+
+  gap: 4px;
+
+  width: 100%;
+}
+
+.mrf-panel .mrf-step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 32px;
+  min-width: 32px;
+  height: 34px;
+
+  padding: 0;
+
+  border: 1px solid var(--mrf-border);
+  border-radius: 6px;
+
+  background: var(--mrf-facebook-gray);
+  color: var(--mrf-blue);
+
+  cursor: pointer;
+
+  font-family: var(--mrf-font);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+
+  box-sizing: border-box;
+}
+
+.mrf-panel .mrf-step:hover {
+  background: var(--mrf-facebook-gray-hover);
+}
+
+.mrf-panel .mrf-step:disabled {
+  color: var(--mrf-disabled);
+
+  cursor: not-allowed;
+}
+
+.mrf-panel .mrf-pick-n,
+.mrf-pick-days {
+  display: block;
+
+  min-width: 34px;
+
+  color: var(--mrf-blue);
+
+  font-size: 14px;
+  font-weight: 800;
+
+  text-align: center;
+}
+
+.mrf-stale-select {
+  width: 100% !important;
+
+  min-width: 0 !important;
+
+  white-space: nowrap;
+}
+
+.mrf-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 19px;
+  height: 18px;
+
+  margin-left: 3px;
+
+  padding: 0 4px;
+
+  border-radius: 999px;
+
+  background: rgba(255, 255, 255, 0.18);
+
+  color: var(--mrf-white);
+
+  font-size: 10px;
+  font-weight: 800;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Primary relist action                                                      */
+/* -------------------------------------------------------------------------- */
+
+.mrf-primary-action-section {
+  align-items: center;
+
+  padding: 2px 0 0;
+
+  border: 0;
+
+  background: transparent;
+}
+
+#mrf-relist-btn {
+  position: static;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: min(280px, 100%);
+
+  min-height: 44px;
+
+  margin: 0 auto;
+
+  padding: 10px 16px;
+
+  box-sizing: border-box;
+
+  font-size: 14px;
+
+  text-align: center;
+}
+
+#mrf-relist-btn:disabled {
+  border-color: var(--mrf-disabled);
+
+  background: var(--mrf-disabled);
+  color: var(--mrf-white);
+
+  cursor: not-allowed;
+}
+
+.mrf-btn-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  width: 100%;
+}
+
+.mrf-btn-glyph {
+  display: block;
+
+  width: 20px;
+  height: 20px;
+}
+/* -------------------------------------------------------------------------- */
+/* Relist progress                                                            */
+/* -------------------------------------------------------------------------- */
+
+#ai-overlay {
+  position: fixed;
+  inset: 0;
+
+  z-index: 2147483645;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  pointer-events: none;
+
+  background: rgba(0, 0, 0, 0.18);
+
+  opacity: 0;
+
+  transition: opacity 0.2s ease;
+}
+
+#ai-overlay.show {
+  opacity: 1;
+}
+
+#ai-overlay .message {
+  min-width: 260px;
+  max-width: calc(100vw - 32px);
+
+  padding: 18px 22px;
+
+  border: 1px solid var(--mrf-border);
+  border-radius: 12px;
+
+  background: var(--mrf-surface);
+  color: var(--mrf-text);
+
+  box-shadow: var(--mrf-shadow-panel);
+
+  font-family: var(--mrf-font);
+  text-align: center;
+}
+
+#ai-overlay .title {
+  color: var(--mrf-text);
+
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+#ai-overlay .subtitle {
+  margin-top: 5px;
+
+  color: var(--mrf-text-secondary);
+
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+#ai-progress-container {
+  position: fixed;
+
+  left: 5px;
+  right: auto;
+  bottom: 5px;
+
+  z-index: 2147483646;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  width: 320px;
+
+  min-height: 82px;
+
+  padding: 14px 16px;
+
+  border: 1px solid var(--mrf-border);
+  border-radius: 12px;
+
+  background: var(--mrf-surface);
+  color: var(--mrf-text);
+
+  box-shadow: var(--mrf-shadow-panel);
+
+  font-family: var(--mrf-font);
+  font-size: 14px;
+  font-weight: 600;
+
+  opacity: 0;
+
+  transform: translateY(10px);
+
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+
+  box-sizing: border-box;
+}
+
+#ai-progress-container.show {
+  opacity: 1;
+  padding-bottom: 35px;
+  transform: translateY(0);
+}
+
+#ai-progress-container #ai-message {
+  min-height: 20px;
+
+  color: var(--mrf-text);
+
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+#ai-progress-bar-container {
+  position: relative;
+
+  height: 8px;
+
+  margin-top: 10px;
+  margin-left: 0;
+
+  overflow: visible;
+
+  border-radius: 999px;
+
+  background: var(--mrf-facebook-gray-hover);
+}
+
+#ai-progress-bar-container #ai-progress-bar {
+  width: 0;
+  height: 8px;
+
+  border-radius: inherit;
+
+  background: var(--mrf-blue);
+
+  transition: width 0.3s ease-out;
+}
+
+#ai-progress-bar-container #ai-progress-text {
+  position: absolute;
+
+  top: 13px;
+  left: 0;
+
+  color: var(--mrf-text-secondary);
+
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Dialogs                                                                    */
+/* -------------------------------------------------------------------------- */
+
+.dialog-overlay {
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 2147483647;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(0, 0, 0, 0.42);
+
+  font-family: var(--mrf-font);
+}
+
+.dialog {
+  width: min(400px, calc(100vw - 32px));
+
+  padding: 22px;
+
+  border: 1px solid var(--mrf-divider);
+  border-radius: 12px;
+
+  background: var(--mrf-surface);
+  color: var(--mrf-text);
+
+  box-shadow: var(--mrf-shadow-panel);
+
+  box-sizing: border-box;
+}
+
+.dialog-title {
+  margin-bottom: 8px;
+
+  color: var(--mrf-text);
+
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.2;
+
+  text-align: center;
+}
+
+.dialog-subtitle {
+  margin: 0 auto 18px;
+
+  color: var(--mrf-text-secondary);
+
+  font-size: 14px;
+  line-height: 1.45;
+
+  text-align: center;
+}
+
+/*
+ * Existing dialog HTML includes inline #333/#666 text colors.
+ * Override those inline values so dialogs also follow dark mode.
+ */
+.dialog-subtitle [style*="color: #333"],
+.dialog-subtitle [style*="color:#333"] {
+  color: var(--mrf-text) !important;
+}
+
+.dialog-subtitle [style*="color: #666"],
+.dialog-subtitle [style*="color:#666"] {
+  color: var(--mrf-text-secondary) !important;
+}
+
+.dialog-buttons {
+  display: flex;
+  flex-direction: column;
+
+  gap: 8px;
+}
+
+.dialog-btn {
+  min-height: 44px;
+
+  padding: 10px 16px;
+
+  border-radius: 8px;
+
+  cursor: pointer;
+
+  font-family: var(--mrf-font);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.dialog-btn-primary {
+  border: 1px solid var(--mrf-blue);
+
+  background: var(--mrf-blue);
+  color: var(--mrf-white);
+}
+
+.dialog-btn-primary:hover {
+  background: var(--mrf-blue-hover);
+}
+
+.dialog-btn-secondary,
+.dialog-btn-cancel {
+  border: 1px solid var(--mrf-border);
+
+  background: var(--mrf-facebook-gray);
+  color: var(--mrf-text);
+}
+
+.dialog-btn-secondary:hover,
+.dialog-btn-cancel:hover {
+  background: var(--mrf-facebook-gray-hover);
+}
+
+.dialog-btn small {
+  display: block;
+
+  margin-top: 2px;
+
+  color: inherit;
+
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Completion toast                                                           */
+/* -------------------------------------------------------------------------- */
+
+#mrf-celebration {
+  position: fixed;
+
+  top: 24px;
+  right: 24px;
+
+  z-index: 2147483646;
+
+  animation:
+    mrf-toast-in 0.25s ease-out,
+    mrf-toast-out 0.25s ease 7.7s forwards;
+}
+
+@keyframes mrf-toast-in {
+  from {
+    opacity: 0;
+
+    transform: translateX(30px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform: none;
+  }
+}
+
+@keyframes mrf-toast-out {
+  to {
+    opacity: 0;
+
+    transform: translateX(30px);
+  }
+}
+
+.mrf-toast-card {
+  display: flex;
+  align-items: flex-start;
+
+  gap: 12px;
+
+  width: 320px;
+
+  padding: 14px;
+
+  border: 1px solid var(--mrf-divider);
+  border-radius: 12px;
+
+  background: var(--mrf-surface);
+
+  box-shadow: var(--mrf-shadow-panel);
+
+  font-family: var(--mrf-font);
+
+  box-sizing: border-box;
+}
+
+.mrf-toast-icon {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+
+  width: 34px;
+  height: 34px;
+
+  border-radius: 50%;
+
+  background: var(--mrf-blue);
+  color: var(--mrf-white);
+
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.mrf-toast-title {
+  margin-bottom: 2px;
+
+  color: var(--mrf-text);
+
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.mrf-toast-text {
+  color: var(--mrf-text-secondary);
+
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Mobile                                                                     */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 420px) {
+  #mrf-select-btn {
+    left: 5px !important;
+    bottom: 5px !important;
+
+    width: calc(100vw - 10px);
+    max-width: calc(100vw - 10px) !important;
+  }
+
+  .mrf-panel {
+    width: 100%;
+  }
+
+  .mrf-panel-body {
+    padding: 10px;
+  }
+
+  .mrf-section {
+    padding: 9px;
+  }
+
+  #ai-progress-container {
+    width: calc(100vw - 10px);
+  }
+
+  .mrf-toast-card {
+    width: min(320px, calc(100vw - 32px));
+  }
+}

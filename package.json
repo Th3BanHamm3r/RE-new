@@ -1,0 +1,23 @@
+{
+  "name": "REnew-firefox",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Development tooling for the RE:new Firefox extension.",
+  "license": "Mozilla Public License Version 2.0",
+  "scripts": {
+    "lint": "prek run --all-files",
+    "lint:js": "eslint --fix background.js contentScript.js scripts eslint.config.mjs",
+    "format": "prettier --write --ignore-unknown \"**/*.{md,css}\"",
+    "typecheck": "tsc -p tsconfig.json",
+    "validate": "node scripts/validate.mjs",
+    "static": "npm run typecheck && npm run validate",
+    "check": "npm run lint && npm run static"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.10.0",
+    "globals": "17.12.0",
+    "prettier": "3.9.6",
+    "typescript": "5.8.3"
+  }
+}
