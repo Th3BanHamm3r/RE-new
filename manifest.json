@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "RE:new",
   "short_name": "RE:new",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Firefox extension for relisting Facebook Marketplace listings with an always-open control panel.",
   "icons": {
     "16": "icon16.png",

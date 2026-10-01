@@ -67,20 +67,6 @@ about:debugging#/runtime/this-firefox
 5. Return to Facebook.
 6. Refresh the Marketplace tab.
 
-For release builds, increment the version in `manifest.json` and create a new signed package with:
-
-```shell
-make package
-```
-
-The resulting signed `.xpi` is written to:
-
-```text
-dist/REnew-firefox-v<version>.xpi
-```
-
-Release `.xpi` files are included in the repository's `dist/` directory.
-
 ## Development Checks
 
 Run the complete verification suite with:

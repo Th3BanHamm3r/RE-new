@@ -33,6 +33,15 @@
         console.error(`[RE:new:${label}] ${message}`, error);
     }
 
+    function escapeHtml(value) {
+        return String(value)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#39;");
+    }
+
     // Recursively locate a named property in Facebook's nested bootstrapped JSON.
     function findNestedValue(e = {}, t, n) {
         let r = null == e ? void 0 : e[t];
@@ -939,9 +948,18 @@
             credentials: "include"
         });
 
+        if (!t.ok) {
+            throw new Error(
+                `Facebook page request failed with HTTP ${t.status}.`
+            );
+        }
+
+        const html =
+            await t.text();
+
         const n =
             new DOMParser().parseFromString(
-                await t.clone().text(),
+                html,
                 "text/html"
             );
 
@@ -951,20 +969,33 @@
             );
         }
 
-        const r = Array.from(
-            n.getElementsByTagName("script")
-        )
-            .filter(
-                e =>
-                    e.type ===
-                    "application/json"
+        const r = [];
+
+        for (
+            const script of Array.from(
+                n.getElementsByTagName("script")
             )
-            .map(
-                e =>
+        ) {
+            if (
+                script.type !==
+                "application/json"
+            ) {
+                continue;
+            }
+
+            try {
+                r.push(
                     JSON.parse(
-                        e.textContent ?? "{}"
+                        script.textContent ?? "{}"
                     )
-            );
+                );
+            }
+            catch {
+                // Facebook occasionally includes application/json bootstrap
+                // blocks that are not independently parseable. One bad block
+                // must not make the entire Marketplace page unreadable.
+            }
+        }
 
         return {
             inline_JSONs: r
@@ -1575,6 +1606,361 @@
         );
     }
 
+    function parseGraphqlVariables(value) {
+        if (isPlainObject(value)) {
+            return cloneJsonValue(value);
+        }
+
+        if (
+            typeof value === "string" &&
+            value.length > 0
+        ) {
+            try {
+                const parsed =
+                    JSON.parse(value);
+
+                if (isPlainObject(parsed)) {
+                    return parsed;
+                }
+            }
+            catch {
+            }
+        }
+
+        return undefined;
+    }
+
+    function valueContainsString(
+        value,
+        needle,
+        depth = 0,
+        seen = new Set()
+    ) {
+        if (
+            typeof value === "string"
+        ) {
+            return value.includes(needle);
+        }
+
+        if (
+            value === null ||
+            typeof value !== "object" ||
+            depth > 8 ||
+            seen.has(value)
+        ) {
+            return false;
+        }
+
+        seen.add(value);
+
+        if (Array.isArray(value)) {
+            return value.some(
+                item =>
+                    valueContainsString(
+                        item,
+                        needle,
+                        depth + 1,
+                        seen
+                    )
+            );
+        }
+
+        for (
+            const [key, child]
+            of Object.entries(value)
+        ) {
+            if (
+                key.includes(needle)
+            ) {
+                return true;
+            }
+
+            if (
+                valueContainsString(
+                    child,
+                    needle,
+                    depth + 1,
+                    seen
+                )
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    function findEmbeddedGraphqlVariables(
+        pageData,
+        operationName,
+        listingId
+    ) {
+        const candidates = [];
+        const visited = new Set();
+
+        const visit = (
+            node,
+            ancestors = []
+        ) => {
+            if (
+                node === null ||
+                typeof node !== "object" ||
+                visited.has(node)
+            ) {
+                return;
+            }
+
+            visited.add(node);
+
+            if (
+                Object.prototype
+                    .hasOwnProperty.call(
+                        node,
+                        "variables"
+                    )
+            ) {
+                const variables =
+                    parseGraphqlVariables(
+                        node.variables
+                    );
+
+                if (variables) {
+                    const contexts = [
+                        node,
+                        ...ancestors
+                            .slice(-6)
+                            .reverse()
+                    ];
+
+                    let score = 0;
+
+                    for (
+                        let index = 0;
+                        index < contexts.length;
+                        index += 1
+                    ) {
+                        const context =
+                            contexts[index];
+
+                        if (
+                            valueContainsString(
+                                context,
+                                operationName
+                            )
+                        ) {
+                            score +=
+                                100 -
+                                index * 5;
+                        }
+
+                        if (
+                            valueContainsString(
+                                context,
+                                String(listingId)
+                            )
+                        ) {
+                            score +=
+                                25 -
+                                Math.min(
+                                    index,
+                                    5
+                                );
+                        }
+                    }
+
+                    if (score > 0) {
+                        candidates.push({
+                            score,
+                            variables
+                        });
+                    }
+                }
+            }
+
+            const nextAncestors = [
+                ...ancestors,
+                node
+            ].slice(-8);
+
+            const children =
+                Array.isArray(node)
+                    ? node
+                    : Object.values(node);
+
+            for (const child of children) {
+                visit(
+                    child,
+                    nextAncestors
+                );
+            }
+        };
+
+        visit(pageData);
+
+        candidates.sort(
+            (a, b) =>
+                b.score - a.score
+        );
+
+        return (
+            candidates[0]
+                ?.variables
+        );
+    }
+
+    function buildComposerVariables(
+        embeddedVariables,
+        listingId
+    ) {
+        if (
+            isPlainObject(
+                embeddedVariables
+            )
+        ) {
+            const variables =
+                cloneJsonValue(
+                    embeddedVariables
+                ) ?? {};
+
+            /*
+            * Facebook supplied the current variable shape.
+            * Preserve it exactly and only replace values that
+            * are specific to the listing being processed.
+            */
+
+            if (
+                Object.prototype
+                    .hasOwnProperty.call(
+                        variables,
+                        "listingId"
+                    )
+            ) {
+                variables.listingId =
+                    String(listingId);
+            }
+
+            if (
+                Object.prototype
+                    .hasOwnProperty.call(
+                        variables,
+                        "listing_id"
+                    )
+            ) {
+                variables.listing_id =
+                    String(listingId);
+            }
+
+            if (
+                Object.prototype
+                    .hasOwnProperty.call(
+                        variables,
+                        "listingID"
+                    )
+            ) {
+                variables.listingID =
+                    String(listingId);
+            }
+
+            return variables;
+        }
+
+        /*
+        * Legacy fallback only.
+        *
+        * This is used only if Facebook does not expose its
+        * own composer variables in the edit-page bootstrap.
+        */
+        return {
+            listingId:
+                String(listingId),
+
+            is_edit:
+                true,
+
+            composer_mode:
+                "EDIT_LISTING",
+
+            scale:
+                1,
+
+            prefill_id:
+                "0",
+
+            category_id:
+                "0",
+
+            has_prefill:
+                false,
+
+            has_prefetched_category:
+                false,
+
+            should_prefill_c2c_jobs_address:
+                false,
+
+            delivery_types: [
+                "in_person"
+            ]
+        };
+    }
+
+    function normalizeGraphqlDocId(value) {
+        if (
+            typeof value === "string" &&
+            value.length > 0
+        ) {
+            return value;
+        }
+
+        if (
+            typeof value === "number" &&
+            Number.isFinite(value)
+        ) {
+            return String(value);
+        }
+
+        if (
+            value &&
+            typeof value === "object"
+        ) {
+            const candidates = [
+                value.id,
+                value.doc_id,
+                value.docId,
+                value.params?.id,
+                value.params?.doc_id,
+                value.params?.docId
+            ];
+
+            for (const candidate of candidates) {
+                const normalized =
+                    normalizeGraphqlDocId(
+                        candidate
+                    );
+
+                if (normalized)
+                    return normalized;
+            }
+        }
+
+        return "";
+    }
+
+    function getGraphqlErrorMessage(payload) {
+        const candidates = [
+            payload?.errors?.[0]?.message,
+            payload?.error?.message,
+            payload?.errorSummary,
+            payload?.errorDescription
+        ];
+
+        return candidates.find(
+            value =>
+                typeof value === "string" &&
+                value.length > 0
+        ) ?? "";
+    }
+
     // Read an existing listing and normalize it into the create-listing mutation shape.
     const buildRelistPayload = e =>
         listingReadQueue.run(
@@ -1582,13 +1968,28 @@
                 const itemUrl =
                     `https://www.facebook.com/marketplace/item/${e}/`;
 
-                let n =
-                    findNestedValue(
-                        await fetchMarketplacePageData(
-                            itemUrl
-                        ),
-                        "marketplace_product_details_page"
+                let n;
+
+                try {
+                    n =
+                        findNestedValue(
+                            await fetchMarketplacePageData(
+                                itemUrl
+                            ),
+                            "marketplace_product_details_page"
+                        );
+                }
+                catch (error) {
+                    logDiagnostic(
+                        `Direct listing-page read failed for ${e}: ${
+                            error instanceof Error
+                                ? error.message
+                                : String(error)
+                        }`,
+                        "read_listing",
+                        "warning"
                     );
+                }
 
                 if (!n) {
                     try {
@@ -1609,7 +2010,16 @@
                         if (pageData?.target)
                             n = pageData;
                     }
-                    catch {
+                    catch (error) {
+                        logDiagnostic(
+                            `Inline listing-page read failed for ${e}: ${
+                                error instanceof Error
+                                    ? error.message
+                                    : String(error)
+                            }`,
+                            "read_listing",
+                            "warning"
+                        );
                     }
                 }
 
@@ -1628,33 +2038,108 @@
                 const editUrl =
                     `https://www.facebook.com/marketplace/edit/?listing_id=${e}`;
 
-                const docId =
-                    await readPageVariable(
-                        "CometMarketplaceComposerRootComponentQuery_facebookRelayOperation",
-                        editUrl
+                const composerOperation =
+                    "CometMarketplaceComposerRootComponentQuery_facebookRelayOperation";
+
+                let editPageData;
+
+                try {
+                    editPageData =
+                        await fetchMarketplacePageData(
+                            editUrl
+                        );
+                }
+                catch (error) {
+                    logDiagnostic(
+                        `Could not read the edit page for listing ${e}: ${
+                            error instanceof Error
+                                ? error.message
+                                : String(error)
+                        }`,
+                        "read_listing",
+                        "warning"
                     );
+                }
+
+                let docId = "";
+
+                try {
+                    docId =
+                        normalizeGraphqlDocId(
+                            await readPageVariable(
+                                composerOperation,
+                                editUrl
+                            )
+                        );
+                }
+                catch (error) {
+                    logDiagnostic(
+                        `Composer doc_id module lookup failed for ${e}: ${
+                            error instanceof Error
+                                ? error.message
+                                : String(error)
+                        }`,
+                        "read_listing",
+                        "warning"
+                    );
+                }
+
+                if (
+                    !docId &&
+                    editPageData
+                ) {
+                    docId =
+                        normalizeGraphqlDocId(
+                            findNestedValue(
+                                editPageData,
+                                composerOperation
+                            )
+                        );
+                }
+
+                if (!docId) {
+                    throw new Error(
+                        "Facebook's edit-listing GraphQL document ID could not be resolved."
+                    );
+                }
+
+                /*
+                * Pull the variables belonging to the exact composer
+                * query from Facebook's current edit-page bootstrap.
+                */
+                const embeddedVariables =
+                    editPageData
+                        ? findEmbeddedGraphqlVariables(
+                            editPageData,
+                            composerOperation,
+                            e
+                        )
+                        : undefined;
+
+                const composerVariables =
+                    buildComposerVariables(
+                        embeddedVariables,
+                        e
+                    );
+
+                logDiagnostic(
+                    embeddedVariables
+                        ? `Recovered Facebook composer variables: ${Object.keys(
+                            composerVariables
+                        ).join(", ")}`
+                        : "Facebook did not expose composer variables; using legacy fallback variables.",
+                    "read_listing",
+                    embeddedVariables
+                        ? "info"
+                        : "warning"
+                );
 
                 const composerResponse =
                     await facebookGraphqlRequest(
                         MARKETPLACE_SELLING_URL,
                         docId,
                         "CometMarketplaceComposerRootComponentQuery",
-                        {
-                            listingId: e,
-                            is_edit: true,
-                            composer_mode:
-                                "EDIT_LISTING",
-                            scale: 1,
-                            prefill_id: "0",
-                            category_id: "0",
-                            has_prefill_data:
-                                false,
-                            has_prefetched_category:
-                                false,
-                            delivery_types: [
-                                "in_person"
-                            ]
-                        }
+                        composerVariables
                     );
 
                 const composerJson =
@@ -1663,11 +2148,54 @@
                         .json();
 
                 const r =
-                    composerJson?.data?.listing;
+                    composerJson
+                        ?.data
+                        ?.listing;
+
+                const composerVariableTypes =
+                    Object.fromEntries(
+                        Object.entries(
+                            composerVariables
+                        ).map(
+                            ([key, value]) => [
+                                key,
+                                value === null
+                                    ? "null"
+                                    : Array.isArray(
+                                        value
+                                    )
+                                        ? "array"
+                                        : typeof value
+                            ]
+                        )
+                    );
+
+                logDiagnostic(
+                    `Composer variable types: ${JSON.stringify(
+                        composerVariableTypes
+                    )}`,
+                    "read_listing",
+                    "info"
+                );
 
                 if (!r) {
+                    const graphqlError =
+                        getGraphqlErrorMessage(
+                            composerJson
+                        );
+
+                    logDiagnostic(
+                        `Composer query variable keys: ${Object.keys(
+                            composerVariables
+                        ).join(", ")}`,
+                        "read_listing",
+                        "warning"
+                    );
+
                     throw new Error(
-                        `Composer payload was empty for listing ${e}`
+                        graphqlError
+                            ? `Facebook rejected the edit-listing query: ${graphqlError}`
+                            : `Composer payload was empty for listing ${e}`
                     );
                 }
 
@@ -3135,7 +3663,7 @@
                 alignItems: "center",
                 justifyContent: "center",
                 pointerEvents: "none",
-                background: "rgba(0, 0, 0, 0.18)",
+                background: "rgba(0, 0, 0, 0.7)",
                 opacity: "0",
                 transition: "opacity 0.2s ease"
             }
@@ -3737,17 +4265,17 @@
                 await showDialog(
                     "⚠️ Relisting a large batch",
                     `
-          <div style="text-align: center; margin: 16px 0;">
-            <div style="font-size: 15px; color: #333; margin-bottom: 12px;">
-              You're about to relist <b>${selectedListingIds.length}</b> listings at once.
+            <div style="text-align: center; margin: 16px 0;">
+                <div style="font-size: 15px; color: #333; margin-bottom: 12px;">
+                You're about to relist <b>${selectedListingIds.length}</b> listings at once.
+                </div>
+                <div style="font-size: 14px; color: #666;">
+                Relisting many items in quick succession can trigger Facebook's
+                activity checks. For safety, consider relisting in smaller batches
+                over a few days.
+                </div>
             </div>
-            <div style="font-size: 14px; color: #666;">
-              Relisting many items in quick succession can trigger Facebook's
-              activity checks. For safety, consider relisting in smaller batches
-              over a few days.
-            </div>
-          </div>
-          `,
+            `,
                     [
                         {
                             text:
@@ -3845,15 +4373,15 @@
 
         progressBar.innerHTML =
             `
-    <div
-        id="ai-progress-bar"
-        role="progressbar"
-        aria-valuemin="0"
-        aria-valuemax="100"
-        aria-valuenow="0"
-    ></div>
-    <div id="ai-progress-text">0%</div>
-  `;
+        <div
+            id="ai-progress-bar"
+            role="progressbar"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+        ></div>
+        <div id="ai-progress-text">0%</div>
+    `;
 
         Object.assign(
             progressBar.style,
@@ -3872,7 +4400,10 @@
                 "#ai-progress-bar"
             );
 
-        if (progressFill instanceof HTMLElement) {
+        if (
+            progressFill instanceof
+            HTMLElement
+        ) {
             Object.assign(
                 progressFill.style,
                 {
@@ -4064,6 +4595,7 @@
             listingDocId;
 
         let stopped = false;
+        let stoppedReason = "";
 
         for (
             let index = 0;
@@ -4140,6 +4672,15 @@
                     RelistFailedError
                 ) {
                     stopped = true;
+
+                    const rootError =
+                        e.originalError;
+
+                    stoppedReason =
+                        rootError instanceof Error
+                            ? rootError.message
+                            : e.message;
+
                     break;
                 }
             }
@@ -4198,19 +4739,37 @@
         }
 
         if (stopped) {
+            const safeReason =
+                escapeHtml(
+                    stoppedReason ||
+                    "Facebook did not return the data RE:new expected."
+                );
+
             await showDialog(
                 "⚠️ Relisting Stopped to Protect Your Listings",
                 `
             <div style="text-align: center; margin: 20px 0;">
-              <div style="font-size: 16px; color: #333; margin-bottom: 12px;">
+            <div style="font-size: 16px; color: #333; margin-bottom: 12px;">
                 Facebook couldn't finish recreating this listing, so we stopped here.
-              </div>
-              <div style="font-size: 14px; color: #666;">
-                No other listings were touched. Check this item in Marketplace,
-                then refresh Facebook and try again shortly.
-              </div>
             </div>
-                `,
+
+            <div style="font-size: 13px; color: #666; margin-bottom: 12px;">
+                Processing stopped before RE:new continued to the next listing.
+            </div>
+
+            <div style="
+                padding: 10px 12px;
+                border-radius: 8px;
+                background: #f0f2f5;
+                color: #050505;
+                font: 12px/1.4 monospace;
+                text-align: left;
+                overflow-wrap: anywhere;
+            ">
+                ${safeReason}
+            </div>
+            </div>
+            `,
                 [
                     {
                         text:

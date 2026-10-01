@@ -1,4 +1,4 @@
-# RE:new for Firefox
+# ![Logo](icon48.png) RE:new for Firefox
 
 RE:new is a Firefox extension that adds bulk selection and relisting controls back to the Facebook Marketplace `Selling` page; since Meta is incompetent.
 
@@ -16,6 +16,10 @@ RE:new is a Firefox extension that adds bulk selection and relisting controls ba
 - Light and dark UI themes designed to follow Facebook Marketplace settings.
 
 ## Using RE:new
+
+<p align="center">
+   <img src="UI.png" alt="User Interface" width="300">
+</p>
 
 1. Install or load RE:new in Firefox.
 2. Sign in to Facebook normally.

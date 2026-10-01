@@ -847,7 +847,7 @@
   align-items: center;
   justify-content: center;
 
-  background: rgba(0, 0, 0, 0.42);
+  background: rgba(0, 0, 0, 0.7);
 
   font-family: var(--mrf-font);
 }
