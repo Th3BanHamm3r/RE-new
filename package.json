@@ -1,6 +1,6 @@
 {
   "name": "REnew-firefox",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "private": true,
   "description": "Development tooling for the RE:new Firefox extension.",
   "license": "Mozilla Public License Version 2.0",

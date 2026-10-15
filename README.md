@@ -64,7 +64,8 @@ about:addons
 4. Select **Install Add-on From File…**
 5. Select the downloaded RE:new `.xpi` file.
 6. Confirm the installation when Firefox prompts you.
-7. Open or refresh the Facebook Marketplace **Selling** page.
+7. Open or refresh the Facebook Marketplace **Selling** page.  
+   (If the UI does not appear, check that [permissions](#permissions) are enabled.)
 
 The release `.xpi` is signed by Mozilla for unlisted distribution, so it can be installed persistently in a normal Firefox release without publishing RE:new in the Firefox Add-ons store.
 
@@ -89,19 +90,35 @@ https://*.fbcdn.net/*
 
 These permissions allow the extension to interact with Facebook Marketplace, preserve listing information during the refresh process, maintain local extension state, and work with Facebook-hosted media.
 
+If the extension does not show up on the `Selling` page, check the extension's permissions in the Firefox `about:addons` section:
+
+<p align="center">
+   <img src="permissions.png" alt="Permissions" width="500">
+</p>
+
 ## Privacy
 
-RE:new does not send usage data to analytics services, telemetry collectors, Sentry, or other third-party reporting systems.
+RE:new does not send usage data to analytics services, telemetry collectors, Sentry, advertising systems, or other third-party reporting services.
 
-The extension communicates with Facebook and Facebook CDN hosts as required for Marketplace operations.
+The extension communicates only with Facebook and Facebook CDN hosts as required to perform Facebook Marketplace operations. This information is used only to provide the Marketplace relisting functionality and is not transmitted to an independent RE:new analytics, telemetry, or logging service.
 
-RE:new uses Firefox extension storage for local operational data such as:
+As part of the relisting workflow, RE:new handles the following categories of data:
 
-- Marketplace listing cache.
-- Facebook session-related cache data.
-- GraphQL document-ID cache.
-- Recently refreshed listing identifiers.
-- Extension state used by the UI.
+- **Authentication Information:** Facebook session and authentication data required to perform Marketplace requests, including the Facebook user ID and session tokens used for GraphQL and media operations.
+- **Personally Identifying Information:** Facebook account and Marketplace identifiers, such as the Facebook user ID, Marketplace ID, and listing IDs associated with the user's account.
+- **Location Information:** The latitude and longitude associated with a Marketplace listing so that the listing's existing location can be preserved when it is recreated. RE:new does not use the browser Geolocation API or independently track the device's physical location.
+- **Website Content:** Marketplace listing data required to recreate a listing, including title, description, price, category, photos, videos, attributes, shipping information, and other listing fields provided by Facebook.
+- **Website Activity:** Marketplace operations initiated through RE:new, including reading selected listings, removing original listings, creating replacement listings, and downloading or uploading listing media as required by the relisting process.
+
+RE uses Firefox extension storage for local operational data such as:
+
+- Marketplace listing cache data, including listing identifiers, creation timestamps, and primary-photo references.
+- Facebook session-related cache data used to perform Marketplace operations.
+- GraphQL document-ID cache data.
+- Recently relisted listing identifiers and timestamps.
+- Extension state used by the RE:new interface.
+
+Some temporary data, such as the user's currently selected listing IDs, is held only in memory while the extension is running.
 
 Diagnostic messages may be written to the browser developer console for troubleshooting. RE:new does not transmit those console messages to an external logging service.
 
@@ -110,7 +127,7 @@ Diagnostic messages may be written to the browser developer console for troubles
 RE:new currently targets Firefox Manifest V3 and requires:
 
 ```text
-Firefox 128 or newer
+Firefox 142 or newer
 ```
 
 Facebook does not provide a stable public API for the relisting workflow used by this extension. Marketplace markup, GraphQL document IDs, media upload behavior, and request structures can change independently of RE:new.
